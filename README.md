@@ -215,10 +215,10 @@ Prepare marker regions for primer design based on genome size and assay type.
 
 Generate candidate primers based on identified kmer or marker regions.
 
-**`5.1. Using Kmers and Amino Markers (make_primers.py):`**
+**`5.1. Using Kmers and Amino Markers (make_primers):`**
 
 ```
-python make_primers.py -m cleaned_markers_dir/markers.bed -i mapped_kmers.sam -r reference.fasta
+make_primers -m cleaned_markers_dir/markers.bed -i mapped_kmers.sam -r reference.fasta
 ```
 
 **Arguments:**
@@ -243,27 +243,7 @@ python make_primers.py -m cleaned_markers_dir/markers.bed -i mapped_kmers.sam -r
 * `--primermax_temp`: Maximum primer melting temp (default: 64 C).
 * `--primer_optimum`: Optimum primer length (default: 18).
 * `--cds_limit`: Flag to limit candidate amplicons to regions entirely within a CDS.
-
-**`5.2. For Small Genome/Gene Targets (make_primers_gene.py):`**
-
-```
-python make_primers_gene.py -i mapped_kmers.sam -r reference.fasta
-```
-
-**Arguments:**
-
-* `-i`: (Required) Input kmer alignment file (`.bed` or `.sam`).
-* `-r`: (Required) Reference genome FASTA.
-* `--degen`: Maximum number of degenerate characters allowed if primer regions contain degeneracy (default: False).
-* `--ampmax`: Maximum amplicon length (default: 250).
-* `--ampmin`: Minimum amplicon length (default: 150).
-* `-k`: Kmer size used for `-i` file (default: 18).
-* `--directory`: Output directory (optional).
-* `--primermin`: Minimum primer length (default: 15).
-* `--primermax`: Maximum primer length (default: 25).
-* `--primermin_temp`: Minimum primer melting temp (default: 56 C).
-* `--primermax_temp`: Maximum primer melting temp (default: 64 C).
-* `--primer_optimum`: Optimum primer length (default: 18).
+* 
 
 **Next Steps:** If candidate primers are produced (`primers.fasta`), proceed to In Silico PCR (Step 6).
 
