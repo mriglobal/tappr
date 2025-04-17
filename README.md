@@ -1,4 +1,4 @@
-# TAPPR: Targeted Amplicon Push-button Primer Retriever
+# TAPPR: Targeted Amplicon Primer/Probe Retrieval
 
 A pipeline for designing targeted PCR primers and probes.
 
