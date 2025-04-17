@@ -219,25 +219,15 @@ Prepare marker regions for primer design based on genome size and assay type.
    **Arguments:**
    
    * `-m M`: (Required) Marker file post-marker cleanup in BED format (markers.bed from previous step).
-   
    * `-r R`: (Required) Reference genome of interest (FASTA).
-   
    * `--iomin IOMIN`: Interior oligo minimum size (default: 18).
-   
    * `--iomax IOMAX`: Interior oligo maximum size (default: 28).
-   
    * `--io_opt_tm IO_OPT_TM`: Interior oligo optimal melting temp (default: 65 C).
-   
    * `--io_5prime IO_5PRIME`: 5' sequence requirement for Interior Oligo (e.g., HNNNN) (default: None).
-   
    * `-g G`: GFF annotation file for reference (optional, default: None).
-   
    * `--cds_limit`: Flag to limit candidate amplicons to regions entirely within a CDS (optional flag).
-   
    * `-k K`: Kmer size (default: 18) (Note: Ensure consistency if using kmer info, though primary input is markers).
-   
    * `--output_name OUTPUT_NAME`: Output name prefix for probe files (optional).
-   
    * `-t THREADS`, --threads THREADS: Number of threads for multiprocessing (optional).
 
 This step generates candidate probe sequences based on the marker locations and specified parameters.
