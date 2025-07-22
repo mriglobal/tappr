@@ -1,4 +1,4 @@
-name: tappr_test
+name: tappr
 channels:
   - conda-forge
   - bioconda
