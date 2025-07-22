@@ -2,8 +2,7 @@ import time
 import json
 import pandas as pd
 import argparse
-from MRItaxonomy import accession2taxid as accession
-from MRItaxonomy import taxid
+
 
 
 def taxidfunc(x):
@@ -79,6 +78,8 @@ if myargs.t:
     print('Using .tsv for labels')
 else:
     orgs = list(map(int,myargs.orgs))
+    from MRItaxonomy import accession2taxid as accession
+    from MRItaxonomy import taxid
     print('No .tsv specified, assuming --orgs to be taxids')
 
 if myargs.o:
