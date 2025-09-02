@@ -22,6 +22,7 @@ def kmercount(replicon, k):
     kd = {}
     for j in range(len(replicon)-k):
         kmer = Seq(replicon[j:j+k])
+        kmer = str(kmer).upper()
         if str(kmer) in kd.keys():
             kd[str(kmer)]+=1
             kd[str(kmer.reverse_complement())]+=1
