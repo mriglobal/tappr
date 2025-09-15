@@ -28,6 +28,8 @@ TAPPR provides several paths for primer design depending on the input data and g
 
 ## Detailed Workflow Steps & Usage
 
+[📄 View the full flowchart figure (PDF)](img/Fig_1_TAPPR_flow.pdf)
+
 ### 1. Search for Conserved Kmers in Target Group
 
 Use `kmercountinner.py` to find kmers conserved across a set of sequences.
