@@ -8,10 +8,6 @@ A pipeline for designing targeted PCR primers and probes.
 
 ```
 conda env create -f tappr.yml
-
-conda activate tappr
-
-pip install MRITaxonomy
 ```
 
 ## Workflow Overview
@@ -23,9 +19,9 @@ TAPPR provides several paths for primer design depending on the input data and g
 3.  **Degenerate Primer Approach (Alternative):** If direct conservation fails, use a degenerate kmer approach (`kmercountouter_sparse.py`, `hammingclusters_fast.py`, `motifmapper.py`, `collapseoverlapingbedentries.py`).
 4.  **Marker Identification:**
     * **Large Genomes (CDS-based):** Find unique amino acid markers (`amino_marker_outer.py`, `amino_marker_inner.py`, `kmer_set_difference.py`, `markercleanup.py`).
-    * **Small Genomes/Genes (Sybr Green):** Map kmers to a reference (`bowtie2`) for `make_primers_gene.py`.
-    * **Small Genomes (Internal Probes):** Map kmers (`bowtie2`) and find complement regions (`complement_markers.py`).
-5.  **Primer Design:** Generate primers using appropriate scripts (`make_primers.py` or `make_primers_gene.py`).
+    * **Large Genomes (Exclusive Kmers):** Find kmers that occur exclusively in your target relative to output (`kmercountouter_set.py`, `kmer_set_difference.py`)
+    * **Small Genomes (Internal Probes):** Map kmers and find complement regions (`complement_markers.py`).
+5.  **Primer Design:** Generate primers using appropriate scripts (`make_primers`).
 6.  **Validation:** Perform in silico PCR (`simulate_PCR.py`).
 7.  **Probe Alignment (Optional):** Align internal probes if designed (`probe_alignment.py`).
 8.  **Evaluation:** Assess inclusivity and exclusivity (`qpcr_inclusive.py`, `qpcr_exclusive.py`, `amplicon_exclusive.py`).
@@ -141,29 +137,33 @@ python collapseoverlapingbedentries.py primers.bed
 
 Prepare marker regions for primer design based on genome size and assay type.
 
-**4.1. For Small Genomes / Gene Targets (Sybr Green or Internal Probes):**
+**4.1. For Larger Genomes (Using Exclusive Kmers):**
 
-* **Map Kmers to Reference (Example using Bowtie2):**
-    ```
-    # Build index
-    bowtie2-build reference.fasta ref_prefix
-
-    # Align kmers (e.g., from kmercountinner.py)
-    # Ensure your kmer file is in FASTA format
-    bowtie2 --end-to-end -x ref_prefix -f -U conserved_kmers.fasta -S mapped_kmers.sam
-    ```
-    * The output `mapped_kmers.sam` (or converted `.bed`) is used as input `-i` for `make_primers_gene.py` (Step 5.2).
-
-* **Find Complement Regions for Internal Probes (Optional):**
-    ```
-    python complement_markers.py -i mapped_kmers.sam -f reference.fasta -o complement_out
-    ```
-    **Arguments:**
-    * `-i`: (Required) Input file (`.sam` or `.bed`) of kmers mapped to reference.
-    * `-f`: (Required) Reference FASTA used for mapping.
-    * `-o`: Output prefix (optional).
-    * The output `.bed` file can potentially inform internal oligo design.
-
+* **Find Outer Set of Outer Group Kmers (Exclusivity):**
+   ```
+   python kmercountouter_set.py -k 18 --seqs outer_group_sequences.zip
+   ```
+   **Arguments:**
+   * `--seqs`: (Required) Folder containing FASTA/FASTQ sequences (or NCBI datasets zip).  
+   * `-k`: K-mer size (default: `18`).  
+   * `-l`: Minimum length filter for sequences to be included (default: `0`).  
+   * `-c`: Number of chunks to split input into for memory management.  
+   * `-t`: Number of threads (default: all available).  
+   * `-o`: Output prefix for pickled k-mer set file (default: `None`).  
+   * `-i`: Pass in FASTA output from `kmercountinner.py` to do set difference (creates additional output).  
+   * `--fastq`: Flag if input is in FASTQ format instead of FASTA.
+     
+* **Find Set Difference of Outer Group Kmer Set and Inner Kmers:**
+   ```
+   kmer_set_difference.py -A inner_kmers -B outer_kmers
+   ```
+   **Arguments:**
+   * `-k`: K-mer size.  
+   * `-A`: K-mer set A (FASTA by default).  
+   * `-B`: K-mer set B (pickle file).  
+   * `--A_set`: Flag if `-A` is also a pickled k-mer set (instead of FASTA).  
+   * `-o`: Output prefix (default: `<A>_exclusive`).
+   * 785] b8/777      
 **4.2. For Larger Genomes (Using Amino Acid Markers):**
 
 * **Find Kmers Unique to Outer Group (Exclusivity):**
@@ -209,7 +209,7 @@ Prepare marker regions for primer design based on genome size and assay type.
     * `-o`: (Required) Output directory.
     * `-e`: E-value cutoff for BLAST (optional).
     * `-t`: Threads for BLAST (optional).
-    * The output `markers.bed` file is used as input `-m` for `make_primers.py` (Step 5.1).
+    * The output `markers.bed` file is used as input `-m` for `make_primers` (Step 5.1).
  
 * **Generate Probes from Cleaned Markers (make_probes):**
    Use the cleaned marker regions to design potential internal probes (oligos).
@@ -231,6 +231,26 @@ Prepare marker regions for primer design based on genome size and assay type.
    * `-t THREADS`, --threads THREADS: Number of threads for multiprocessing (optional).
 
 This step generates candidate probe sequences based on the marker locations and specified parameters.
+
+**4.3. For Small Genomes / Gene Targets (Sybr Green or Internal Probes):**
+
+* **Map Kmers to Reference (Example using Bowtie2):**
+    ```
+    # Align kmers (e.g., from kmercountinner.py)
+    # Ensure your kmer file is in FASTA format
+    python tappr_mappr.py --kmers kmers.fasta -r reference.fasta
+    ```
+
+* **Find Complement Regions for Internal Probes (Optional):**
+    ```
+    python complement_markers.py -i mapped_kmers.sam -f reference.fasta -o complement_out
+    ```
+    **Arguments:**
+    * `-i`: (Required) Input file (`.sam` or `.bed`) of kmers mapped to reference.
+    * `-f`: (Required) Reference FASTA used for mapping.
+    * `-o`: Output prefix (optional).
+    * The output `.bed` file can potentially inform internal oligo design.
+ 
 
 ### 5. Make Primers
 
