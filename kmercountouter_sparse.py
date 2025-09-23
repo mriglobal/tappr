@@ -1,5 +1,10 @@
 from Bio import SeqIO
-from Bio.SeqUtils import GC
+try:
+    from Bio.SeqUtils import GC
+except ImportError:
+    from Bio.SeqUtils import gc_fraction
+    def GC(*args, **kwargs):
+        return gc_fraction(*args, **kwargs) * 100
 from Bio.Seq import Seq
 import scipy.sparse
 import pandas as pd

@@ -1,7 +1,12 @@
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from Bio.SeqUtils import GC
+try:
+    from Bio.SeqUtils import GC
+except ImportError:
+    from Bio.SeqUtils import gc_fraction
+    def GC(*args, **kwargs):
+        return gc_fraction(*args, **kwargs) * 100
 import pandas as pd
 import os
 import argparse
