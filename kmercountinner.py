@@ -11,6 +11,7 @@ import pandas as pd
 import os
 import argparse
 import multiprocessing
+import gzip
 
 #function to bin replicons in the references based on length
 #In the future this could be expanded to bin using GC content if examples arise where replicon lengths are within 10% of one another
@@ -35,6 +36,22 @@ def kmercount(replicon, k):
             kd[str(kmer.reverse_complement())]=1
     return kd
 
+FA_EXTS = (".fa", ".fna", ".fasta")
+FA_GZ_EXTS = tuple(ext + ".gz" for ext in FA_EXTS)
+ALL_FA_EXTS = FA_EXTS + FA_GZ_EXTS
+
+def is_fasta_like(fname: str) -> bool:
+    return fname.lower().endswith(ALL_FA_EXTS)
+
+def iter_fasta_any(path: str):
+    if path.lower().endswith(".gz"):
+        with gzip.open(path, "rt") as handle:
+            for rec in SeqIO.parse(handle, "fasta"):
+                yield rec
+    else:
+        with open(path, "rt") as handle:
+            for rec in SeqIO.parse(handle, "fasta"):
+                yield rec
 
 parser = argparse.ArgumentParser(description="Count Kmers on records by performing inner join.")
 
@@ -42,7 +59,7 @@ parser = argparse.ArgumentParser(description="Count Kmers on records by performi
 parser.add_argument('-k', nargs='?',type=int, default=18,help="kmer size")
 parser.add_argument('--directory', default=os.getcwd(),help="output file directory")
 parser.add_argument('-r',default=None,help="Reference genome fasta for sequence binning.") #reference genome
-parser.add_argument('--seqs', required=True,help="Directory containing sequence files")
+parser.add_argument('--seqs', required=True,help="Directory containing sequence files (can be gzipped)")
 parser.add_argument('--assembly_level', default=False, action='store_true', )
 parser.add_argument('-o',default=None,help="Output filename prefix.")
 parser.add_argument('-p',default=.1, type=float, help='Percent Variance in reference length for replicon binning')
@@ -56,6 +73,7 @@ if not os.path.exists(myargs.directory):
 os.chdir(myargs.directory)
 reference = myargs.r
 refdirectory = myargs.seqs
+
 if myargs.o:
     outfile=myargs.o
 elif myargs.r:
@@ -83,17 +101,19 @@ if reference:
     recdata = {key:[] for key in range(len(refstats))}
     filtered = False
     for file in filelist:
-        if ".fna" in file or ".fasta" in file:
-            recordname = file.rsplit(sep="_",maxsplit=1)[0]
-            records = list(SeqIO.parse(file,format="fasta"))
-        #if len(records) <= len(refstats):
-            for r in records:
-                i = replicontest(refstats, r)
-                print(i)
-                if i >= 0:
-                    recdata[i].append(r)
-                else:
-                    filtered = True
+        if not is_fasta_like(file):
+            continue
+    
+        recordname = file.rsplit(sep="_", maxsplit=1)[0]
+        records = list(iter_fasta_any(file))
+    
+        for r in records:
+            i = replicontest(refstats, r)
+            print(i)
+            if i >= 0:
+                recdata[i].append(r)
+            else:
+                filtered = True
 
     kmerseries = {key:pd.Series(kmerdicts[key]) for key in kmerdicts}
 
@@ -122,13 +142,14 @@ elif myargs.assembly_level:
     filelist = os.listdir()
     recdata = {}
     for file in filelist:
-        if file.endswith('.fna') or file.endswith('.fasta'):
-            recdata[file] = list(SeqIO.parse(file,'fasta'))
+        if is_fasta_like(file):
+            recdata[file] = list(iter_fasta_any(file))
     # rec data is now a dictionary of file names by the records in the file
     kmerdict = dict()
     list_of_lists = [[key, value] for key, value in recdata.items()]
     first_sequences = list_of_lists[0][1]
     first_sequences_key = list_of_lists[0][0]
+    
     kmerseries = [pd.Series(kmercount(str(V.seq),ksize)) for V in first_sequences]
     kmerseries = pd.concat(kmerseries, axis=1, join='outer', ignore_index=True)
     kmerseries['collapsed'] = kmerseries.max(axis=1)
@@ -157,8 +178,8 @@ else:
     filelist = os.listdir()
     recdata = []
     for file in filelist:
-        if file.endswith('.fna') or file.endswith('.fasta'):
-            recdata.extend(list(SeqIO.parse(file,'fasta')))
+        if is_fasta_like(file):
+            recdata.extend(list(iter_fasta_any(file)))
 
     kmerdict = dict()
     first_sequence = recdata.pop()

@@ -5,6 +5,8 @@ from scipy.cluster.hierarchy import linkage, fcluster
 import argparse as ap
 from Bio import SeqIO
 import sourmash
+import gzip
+from pathlib import Path
 
 
 def fasta_check(filename):
@@ -17,7 +19,7 @@ parser = ap.ArgumentParser(description="Clustering method to bin sequences into 
 
 #command line arguments
 #TODO: add ability to file walk across directories to hash assemblies instead of just multifasta
-parser.add_argument('--seqs',required=True,help='Either a single multifasta containing sequences or a directory containing fasta files to cluster.')
+parser.add_argument('--seqs',required=True,help='Either a single multifasta containing sequences, a directory containing fasta files, or a gzip directory of fastas to cluster.')
 parser.add_argument('-o',default=False,help='Directory for all output files.')
 parser.add_argument('-l',default=None,type=str,help='Label prefix for clusters. This prefix will also be applied to cluster names if label tsv output is specified.')
 parser.add_argument('-k',default=11,type=int,help='K length for sourmash kmer sketching. Default: 11')
@@ -58,6 +60,7 @@ if myargs.l:
     label_prefix = myargs.l + '_'
 else:
     label_prefix = ''
+    
 
 if fasta_check(myargs.seqs):
     seqs = list(SeqIO.parse(myargs.seqs,'fasta'))
@@ -69,6 +72,19 @@ if fasta_check(myargs.seqs):
         mh = sourmash.MinHash(0,ksize=klen,scaled=myargs.s,track_abundance=myargs.abundance)
         mh.add_sequence(str(s.seq),force=True)
         sketches.append(mh)
+
+# handle .gz case
+elif myargs.seqs.endswith(".gz") and os.path.isfile(myargs.seqs):
+    with gzip.open(myargs.seqs, "rt") as handle:
+        seqs = list(SeqIO.parse(handle, 'fasta'))
+    seq_ids = [s.id for s in seqs]
+
+    sketches = []
+    for s in seqs:
+        mh = sourmash.MinHash(0, ksize=klen, scaled=myargs.s, track_abundance=myargs.abundance)
+        mh.add_sequence(str(s.seq), force=True)
+        sketches.append(mh)
+
 
 elif os.path.isdir(myargs.seqs):
     filelist = []

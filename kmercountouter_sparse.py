@@ -11,6 +11,25 @@ import pandas as pd
 import numpy as np
 import argparse
 import os
+import gzip
+
+FA_EXTS = (".fa", ".fna", ".fasta")
+FA_GZ_EXTS = tuple(ext + ".gz" for ext in FA_EXTS)
+ALL_FA_EXTS = FA_EXTS + FA_GZ_EXTS
+
+def is_fasta_like(fname: str) -> bool:
+    return fname.lower().endswith(ALL_FA_EXTS)
+
+def iter_fasta_any(path: str):
+    """Yield SeqRecords from fasta or fasta.gz file."""
+    if path.lower().endswith(".gz"):
+        with gzip.open(path, "rt") as handle:
+            for rec in SeqIO.parse(handle, "fasta"):
+                yield rec
+    else:
+        with open(path, "rt") as handle:
+            for rec in SeqIO.parse(handle, "fasta"):
+                yield rec
 
 def get_accession(seq_id):
     '''accession parser necessary to handle RVDB input'''
@@ -85,15 +104,18 @@ refdirectory = myargs.seqs
 os.chdir(refdirectory)
 filelist = os.listdir()
 for file in filelist:
-    if ".fna" in file or ".fasta" in file:
-        recordname = file.rsplit(sep="_",maxsplit=1)[0]
-        records = list(SeqIO.parse(file, format="fasta"))
-        #bins sequences into groups based on provided reference. -1 indicates null group
-        for r in records:
-            i = replicontest(refstats, r)
-            print(i)
-            if i >= 0:
-                recdata[i].append(r)
+    if not is_fasta_like(file):
+        continue
+
+    recordname = file.rsplit(sep="_", maxsplit=1)[0]
+    records = list(iter_fasta_any(file))
+
+    # bin sequences into groups based on provided reference
+    for r in records:
+        i = replicontest(refstats, r)
+        print(i)
+        if i >= 0:
+            recdata[i].append(r)
 
 if myargs.n:
     rec_dict = {}

@@ -6,6 +6,7 @@ import argparse
 import os
 import time
 from Bio.SeqRecord import SeqRecord
+import gzip
 
 
 def get_chunks(x, num_chunks):
@@ -34,6 +35,26 @@ def process_chunk(chunk, ksize, cores):
     with Pool(cores) as pool:
         results = pool.starmap(wrapper, [(str(x), ksize) for x in chunk])
         return results
+    
+FA_EXTS = (".fa", ".fna", ".fasta", ".fastq")
+FA_GZ_EXTS = tuple(ext + ".gz" for ext in FA_EXTS)
+ALL_EXTS = FA_EXTS + FA_GZ_EXTS
+
+def is_seq_file(fname: str) -> bool:
+    return fname.lower().endswith(ALL_EXTS)
+
+def iter_records(path: str, fmt: str, min_len: int):
+    """Yield SeqRecords from fasta/fastq (plain or gz)."""
+    if path.lower().endswith(".gz"):
+        with gzip.open(path, "rt") as handle:
+            for rec in SeqIO.parse(handle, fmt):
+                if len(rec.seq) > min_len:
+                    yield rec
+    else:
+        with open(path, "rt") as handle:
+            for rec in SeqIO.parse(handle, fmt):
+                if len(rec.seq) > min_len:
+                    yield rec
 
 parser = argparse.ArgumentParser(description="Union Kmer Set Evaluation")
 parser.add_argument('--seqs', required=True,help='Folder for Sequences.')
@@ -58,14 +79,16 @@ os.chdir(refdirectory)
 filelist = os.listdir()
 recdata = []
 for file in filelist:
-    if not myargs.fastq:
-        file_format = 'fasta'
+    if not is_seq_file(file):
+        continue
+    # pick format
+    if myargs.fastq:
+        file_format = "fastq"
     else:
-        file_format = 'fastq'
-    if ".fna" in file or ".fasta" in file or ".fastq" in file:
-        records = [str(s.seq) for s in SeqIO.parse(file,format=file_format) if len(s.seq) > min_len]
-        #if len(records) <= len(refstats):
-        recdata.extend(records)
+        file_format = "fasta"
+    # parse with gzip-aware iterator
+    for rec in iter_records(file, file_format, min_len):
+        recdata.append(str(rec.seq))
 
 kmerset = set()
 seq_chunks = get_chunks(recdata,myargs.c)
