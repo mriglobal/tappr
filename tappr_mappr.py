@@ -18,7 +18,7 @@ def process_reference(r, k_size, kmer_set, kmer_ids):
                 'query_seq': candidate_kmer,
                 'flag': 0,
                 'reference_id': r.id,
-                'reference_start': i + 1,  # Adjust for 1-based index
+                'reference_start': i,
                 'qual': 42,
                 'cigar': [(0, k_size)],
                 'next_reference': 0,
@@ -37,7 +37,7 @@ def process_reference(r, k_size, kmer_set, kmer_ids):
                 'query_seq': candidate_kmer,
                 'flag': 16,
                 'reference_id': r.id,
-                'reference_start': len(r) - (i + k_size - 1),  # Correcting the index for reverse
+                'reference_start': len(r) - (i + k_size),
                 'qual': 42,
                 'cigar': [(0, k_size)],
                 'next_reference': 0,
@@ -123,7 +123,7 @@ if not myargs.bed:
 else:
     print("Writing BED file.")
     #BED files are 0 indexed
-    outf = pd.DataFrame({'chr':[align['reference_id'] for align in alignments], 'start':[align['reference_start']-1 for align in alignments]})
+    outf = pd.DataFrame({'chr':[align['reference_id'] for align in alignments], 'start':[align['reference_start'] for align in alignments]})
     outf['end'] = outf['start'] + k_size
     bed = pybedtools.BedTool.from_dataframe(outf)
     merged_bed = bed.sort().merge()
