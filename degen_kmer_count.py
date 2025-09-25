@@ -2,7 +2,12 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import Counter
-from Bio.SeqUtils import GC
+try:
+    from Bio.SeqUtils import GC
+except ImportError:
+    from Bio.SeqUtils import gc_fraction
+    def GC(*args, **kwargs):
+        return gc_fraction(*args, **kwargs) * 100
 from skbio import DNA, TabularMSA
 import annoy
 from scipy.spatial.distance import pdist
