@@ -14,23 +14,30 @@ conda env create -f tappr.yml
 
 TAPPR provides several paths for primer design depending on the input data and goals:
 
-1.  **Conserved Kmer Search:** Start by searching for conserved kmers within your target sequence group (`kmercountinner.py`).
+### Inclusive Intervals
+1.  **Conserved Kmer Search (recommended to start):** Start by searching for conserved kmers within your target sequence group (`kmercountinner.py`).
 2.  **Clustering (Optional):** If conserved kmers are insufficient, cluster sequences into subgroups (`clustering.py`) and repeat the kmer search on clusters.
 3.  **Degenerate Primer Approach (Alternative):** If direct conservation fails, use a degenerate kmer approach (`kmercountouter_sparse.py`, `hammingclusters_fast.py`, `motifmapper.py`, `collapseoverlapingbedentries.py`).
-4.  **Marker Identification:**
+### Exclusive Intervals
+1. **Kmer Outer Set (recommended):** Find the corpus of all kmers that occur in the outer group (`kmercountouter_set.py`), to then set difference with inner kmers (`kmer_set_difference.py`) to find exclusive kmers.
+2.  **Alternative Methods:**
     * **Large Genomes (CDS-based):** Find unique amino acid markers (`amino_marker_outer.py`, `amino_marker_inner.py`, `kmer_set_difference.py`, `markercleanup.py`).
-    * **Large Genomes (Exclusive Kmers):** Find kmers that occur exclusively in your target relative to output (`kmercountouter_set.py`, `kmer_set_difference.py`)
-    * **Small Genomes (Internal Probes):** Map kmers and find complement regions (`complement_markers.py`).
-5.  **Primer Design:** Generate primers using appropriate scripts (`make_primers`).
-6.  **Validation:** Perform in silico PCR (`simulate_PCR.py`).
-7.  **Probe Alignment (Optional):** Align internal probes if designed (`probe_alignment.py`).
-8.  **Evaluation:** Assess inclusivity and exclusivity (`qpcr_inclusive.py`, `qpcr_exclusive.py`, `amplicon_exclusive.py`).
+    * **Small Genomes (Internal Probes):** Map kmers (`tappr_mappr.py`) and find complement regions (`complement_markers.py`).
+### Designing Primers & Probes
+1.  **Probe Design:** Generate probes using (`make_probes`).
+2.  **Primer Design:** Generate primers using (`make_primers`).
+### Validating Primer & Probe Designs
+1.  **Validation:** Perform in silico PCR (`simulate_PCR.py`).
+2.  **Probe Alignment (if applicable):** Align internal probes if designed (`probe_alignment.py`).
+3.  **Evaluation:** Assess inclusivity and exclusivity depending on PCR type (`qpcr_inclusive.py`, `qpcr_exclusive.py`, `amplicon_exclusive.py`).
 
 ## Detailed Workflow Steps & Usage
 
 [📄 View the full flowchart figure (PDF)](img/Fig_1_TAPPR_flow.pdf)
 
-### 1. Search for Conserved Kmers in Target Group
+## Example workflow can be found in tappr_pipeline_example.sh
+
+### 1. Search for Conserved Kmers in Target Group (Inner-join kmer sets)
 
 Use `kmercountinner.py` to find kmers conserved across a set of sequences.
 
@@ -48,12 +55,8 @@ python kmercountinner.py --seqs /path/to/sequence/directory -k 18
 * `-p`: Allowed percent variance in reference length for replicon binning (default: 0.1, useful for large genomes) (optional).
 * `--assembly_level`: Flag to count kmers by assembly rather than per record (optional).
 
-**Next Steps:**
 
-* **If successful:** Proceed to Marker Identification (Step 4) or Primer Design (Step 5).
-* **If fails:** Proceed to Clustering (Step 2) or Degenerate Primer Approach (Step 3).
-
-### 2. Cluster Target Group into Subgroups (Optional)
+### 2. Cluster Target Group into Subgroups (Subcluster)
 
 If `kmercountinner.py` doesn't find enough conserved kmers, cluster the sequences.
 
@@ -74,9 +77,9 @@ python clustering.py --seqs clustering_records.fasta -k 11 --criterion maxclust 
 * `--tsv`: Output a TSV file mapping sequence IDs to cluster membership (optional flag).
 * `-s`: Scaled argument for Sourmash sketch (1/S kmers sampled) (default: 1).
 
-**Next Steps:** Feed the output clusters back into `kmercountinner.py` (Step 1). Repeat clustering/kmer finding as needed.
+**Next Steps:** Feed the output clusters back into `kmercountinner.py` (Step 1). Repeat clustering/kmer finding as needed to find a set of groups that can be used to in aggregate cover the desired in group. 
 
-### 3. Vorpal Degenerate Kmer Clustering (Alternative)
+### 3. Vorpal Degenerate Kmer Clustering (Degenerate bases)
 
 An alternative approach if direct kmer conservation fails.
 
@@ -133,15 +136,12 @@ python collapseoverlapingbedentries.py primers.bed
 
 * Positional: Input `.bed` file (`primers.bed` from previous step).
 
-**Next Steps:** The output `primers.bed` can potentially be used as input for primer design scripts (Step 5), though the primary path involves marker identification.
-
 ### 4. Marker Identification
 
 Prepare marker regions for primer design based on genome size and assay type.
 
-**4.1. For Larger Genomes (Using Exclusive Kmers):**
-
-* **Find Outer Set of Outer Group Kmers (Exclusivity):**
+**4.1. Find outer kmer set of exclusive records (if exclusivity is desired)**
+* **Find Outer Set of Outer Group Kmers (Exclusivity set):**
    ```
    python kmercountouter_set.py -k 18 --seqs outer_group_sequences.zip
    ```
@@ -165,8 +165,8 @@ Prepare marker regions for primer design based on genome size and assay type.
    * `-B`: K-mer set B (pickle file).  
    * `--A_set`: Flag if `-A` is also a pickled k-mer set (instead of FASTA).  
    * `-o`: Output prefix (default: `<A>_exclusive`).
-   * 785] b8/777      
-**4.2. For Larger Genomes (Using Amino Acid Markers):**
+   
+**4.2. (Alternative method) Use Coding Domain Sequences Data to find Amino Markers:**
 
 * **Find Kmers Unique to Outer Group (Exclusivity):**
     ```
@@ -212,7 +212,26 @@ Prepare marker regions for primer design based on genome size and assay type.
     * `-e`: E-value cutoff for BLAST (optional).
     * `-t`: Threads for BLAST (optional).
     * The output `markers.bed` file is used as input `-m` for `make_primers` (Step 5.1).
- 
+
+**4.2. (Alternative method) Use the complement of inner kmers as marker regions:**
+This method is useful if exclusivity isn't a requirement, or for small genomes.
+   ```
+   python complement_markers.py -i inner_kmers.bed -f reference.fasta -o complement_markers.bed
+   ```
+   **Arguments:**
+   * `-i`: (Required) Primer regions bed or sam file.
+   * `-f`: (Required) Fasta file for reference sequence.
+   * `-o`: utput file prefix. Default: Inherit from bed/sam file.
+
+### 5. Probe and Primer Design
+
+Generate candidate primers based on identified kmer and/or marker regions.
+
+### A note on marker regions and primer regions
+If amplification is the primary reporter, ensure that the input primer regions are exclusive through one of the above methods.
+If a probe is used as the reporter, ensure that the input marker regions are exclusive through one of the above methods.
+If the input markers file to the make_primers step is ok to draw primers from, use the --marker-primers flag. Note that this flag should not be used if the complement_markers method was used to generate markers.
+
 * **Generate Probes from Cleaned Markers (make_probes):**
    Use the cleaned marker regions to design potential internal probes (oligos).
    ```
@@ -220,7 +239,7 @@ Prepare marker regions for primer design based on genome size and assay type.
    ```
    **Arguments:**
    
-   * `-m M`: (Required) Marker file post-marker cleanup in BED format (markers.bed from previous step).
+   * `-m M`: (Required) Marker file
    * `-r R`: (Required) Reference genome of interest (FASTA).
    * `--iomin IOMIN`: Interior oligo minimum size (default: 18).
    * `--iomax IOMAX`: Interior oligo maximum size (default: 28).
@@ -233,31 +252,7 @@ Prepare marker regions for primer design based on genome size and assay type.
    * `-t THREADS`, --threads THREADS: Number of threads for multiprocessing (optional).
 
 This step generates candidate probe sequences based on the marker locations and specified parameters.
-
-**4.3. For Small Genomes / Gene Targets (Sybr Green or Internal Probes):**
-
-* **Map Kmers to Reference (Example using Bowtie2):**
-    ```
-    # Align kmers (e.g., from kmercountinner.py)
-    # Ensure your kmer file is in FASTA format
-    python tappr_mappr.py --kmers kmers.fasta -r reference.fasta
-    ```
-
-* **Find Complement Regions for Internal Probes (Optional):**
-    ```
-    python complement_markers.py -i mapped_kmers.sam -f reference.fasta -o complement_out
-    ```
-    **Arguments:**
-    * `-i`: (Required) Input file (`.sam` or `.bed`) of kmers mapped to reference.
-    * `-f`: (Required) Reference FASTA used for mapping.
-    * `-o`: Output prefix (optional).
-    * The output `.bed` file can potentially inform internal oligo design.
  
-
-### 5. Make Primers
-
-Generate candidate primers based on identified kmer or marker regions.
-
 **`5.1. Using Kmers and Amino Markers (make_primers):`**
 
 ```
@@ -266,7 +261,7 @@ Generate candidate primers based on identified kmer or marker regions.
 
 **Arguments:**
 
-* `-m`: (Required) Marker file (`.bed` from `markercleanup.py`).
+* `-m`: (Required) Marker file
 * `-i`: (Required) Input kmer alignment file (`.bed` or `.sam`).
 * `-r`: (Required) Reference genome FASTA.
 * `--ampmax`: Maximum amplicon length (default: 250).
@@ -394,3 +389,46 @@ python amplicon_exclusive.py -a simulated_pcr.amplicons --targets 9606 10090 # E
 * `--min`: Minimum amplicon length to filter (optional).
 * `--max`: Maximum amplicon length to filter (optional).
 * `--split_col`: Column index (0-based) to split HitName for accession (default: 0 for GenBank).
+
+### 9. Evaluate Primer Inclusivity and Exclusivity
+
+```
+python dataset_operators.py {subtract,add} 
+```
+If add:
+**Arguments:**
+* `-z`: List of zip archives to aggregate.
+* `-o`: Output archive name. Default is to inherit name from first archive in list.
+If subtract:
+**Arguments:**
+* `-a`: Zip archive A to be filtered.
+* `-b`: Zip archive B whose members will be filtered from A.
+* `-o`: Output archive name. Default is to inherit names from A and B archive file names.
+
+```
+python make_blast_db.py
+```
+**Arguments:**
+* `-t`: taxid to construct db for
+* `-s`: file containing sequences to build a database for
+* `-o`: name for output blast database. default: tappr_db/tappr_db
+
+```
+python make_label_table.py
+```
+**Arguments:**
+* `--groups`: any number of multifasta files. must be the length of labels args (space separated strings)
+* `--labels`: any number of labels for the records in the mutlifasta files. must be the length of groups args (space separated strings)
+* `--o`: name of ouptut file. default is metadata.tsv
+
+```
+python primer_summary_table.py
+```
+**Arguments:**
+* `-o`: Optionally specify output prefix
+* `-a`: Probe Aligned Amplicons File
+* `-i`: optional inclusivity .tsv coverage table
+* `-e`: optional exclusivity json output to filter by
+* `-r`: optional reference genome accession identifier to report positional information
+
+
