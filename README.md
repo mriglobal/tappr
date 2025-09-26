@@ -35,7 +35,8 @@ TAPPR provides several paths for primer design depending on the input data and g
 
 [📄 View the full flowchart figure (PDF)](img/Fig_1_TAPPR_flow.pdf)
 
-## Example workflow can be found in tappr_pipeline_example.sh
+### Example workflow can be found in /example_workflows/tappr_pipeline_example.sh
+### Data for example workflows can be found in the ftt_example_data release
 
 ### 1. Search for Conserved Kmers in Target Group (Inner-join kmer sets)
 
