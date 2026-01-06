@@ -293,7 +293,6 @@ python simulate_PCR.py -p primers.fasta --db /path/to/blastdb --extract_amp
 
 * `-p`: (Required) Primer FASTA file (output from Step 5).
 * `--db`: (Required) Path to BLAST database.
-* `--extract_amp`: Flag to extract amplicon sequences (outputs `.amplicons` file).
 * `-r`: Pre-computed BLAST output table (optional).
 * `--mismatches`: Allowed mismatches (integer count or float fraction < 1) (default: 3).
 * `--min`: Minimum product length (default: 40).
