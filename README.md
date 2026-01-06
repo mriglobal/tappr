@@ -267,12 +267,6 @@ This step generates candidate probe sequences based on the marker locations and 
 * `-r`: (Required) Reference genome FASTA.
 * `--ampmax`: Maximum amplicon length (default: 250).
 * `--ampmin`: Minimum amplicon length (default: 150).
-* `--io`: Flag to pick an interior oligo from marker regions.
-* `--iomin`: Interior oligo minimum size (default: 18).
-* `--io_optimum`: Interior oligo optimum size (default: 20).
-* `--iomin_temp`: Interior oligo min melting temp (default: 57 C).
-* `--iomax_temp`: Interior oligo max melting temp (default: 63 C).
-* `--io_5prime`: 5' sequence requirement for Interior Oligo (e.g., `HNNNN`) (default: None).
 * `-k`: Kmer size used for `-i` file (default: 18).
 * `--directory`: Output directory (optional).
 * `-g`: GFF annotation file for reference (optional).
@@ -282,7 +276,8 @@ This step generates candidate probe sequences based on the marker locations and 
 * `--primermax_temp`: Maximum primer melting temp (default: 64 C).
 * `--primer_optimum`: Optimum primer length (default: 18).
 * `--cds_limit`: Flag to limit candidate amplicons to regions entirely within a CDS.
-* 
+* --marker_primers : Use this flag if primers should be picked from marker regions. Use when amplification alone is reporter signal.
+
 
 **Next Steps:** If candidate primers are produced (`primers.fasta`), proceed to In Silico PCR (Step 6).
 
